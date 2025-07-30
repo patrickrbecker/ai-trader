@@ -42,7 +42,8 @@ class PositionTracker:
             'entry_date': position_data.get('entry_date', datetime.now().strftime('%Y-%m-%d')),
             'status': 'ACTIVE',
             'total_cost': position_data['quantity'] * position_data['entry_price'],
-            'notes': position_data.get('notes', '')
+            'notes': position_data.get('notes', ''),
+            'is_simulation': position_data.get('is_simulation', False)
         }
         
         # Load existing positions
@@ -53,7 +54,8 @@ class PositionTracker:
         with open(self.positions_file, 'w') as f:
             json.dump(positions, f, indent=2)
         
-        print(f"✅ Added position: {position['symbol']} - {position['quantity']} shares/contracts @ ${position['entry_price']}")
+        sim_label = " [SIMULATION]" if position.get('is_simulation') else ""
+        print(f"✅ Added position: {position['symbol']} - {position['quantity']} shares/contracts @ ${position['entry_price']}{sim_label}")
         return position['id']
     
     def add_recommendation(self, recommendation_data):
@@ -166,7 +168,8 @@ class PositionTracker:
             pos_id = position['id']
             perf = latest_performance.get(pos_id, {})
             
-            print(f"\n{position['symbol']} ({position['position_type']})")
+            sim_label = " [SIM]" if position.get('is_simulation') else ""
+            print(f"\n{position['symbol']} ({position['position_type']}){sim_label}")
             print(f"   Quantity: {position['quantity']}")
             print(f"   Entry: ${position['entry_price']:.2f} on {position['entry_date']}")
             print(f"   Cost: ${position['total_cost']:.2f}")
