@@ -44,6 +44,13 @@ Thumbs.db
 # Logs
 *.log
 
-# API keys
+# API keys and secrets
 .env
 config.ini
+*api_key*
+*secret*
+*token*
+
+# Sensitive data
+leap_opportunities.csv
+leap_analysis_*.csv

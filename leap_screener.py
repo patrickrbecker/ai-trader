@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from scipy.stats import norm
 import math
 import warnings
+import time
+import random
 warnings.filterwarnings('ignore')
 
 class LEAPScreener:
@@ -20,8 +22,22 @@ class LEAPScreener:
     def get_options_chain(self, symbol):
         """Fetch options chain for a given symbol"""
         try:
+            # Add delay to be respectful
+            time.sleep(random.uniform(0.5, 1.5))
+            
             ticker = yf.Ticker(symbol)
+            
+            # Get current stock price
+            hist = ticker.history(period="5d")
+            if hist.empty:
+                print(f"No stock data available for {symbol}")
+                return None, []
+            
+            # Get all expiry dates
             expiry_dates = ticker.options
+            if not expiry_dates:
+                print(f"No options data available for {symbol}")
+                return None, []
             
             # Filter for LEAP expiries (>= 1 year out)
             leap_dates = []
@@ -33,10 +49,16 @@ class LEAPScreener:
                 if days_to_expiry >= 365:  # LEAP criteria
                     leap_dates.append(date)
             
-            return ticker, leap_dates[:3]  # Limit to first 3 LEAP dates
+            if not leap_dates:
+                print(f"No LEAP expiries found for {symbol} (only {len(expiry_dates)} total expiries)")
+                return ticker, []
+            
+            print(f"Found {len(leap_dates)} LEAP expiries for {symbol}")
+            return ticker, leap_dates[:3]  # Get first 3 LEAP dates
             
         except Exception as e:
             print(f"Error fetching options for {symbol}: {e}")
+            time.sleep(2)
             return None, []
     
     def calculate_black_scholes(self, S, K, T, r, sigma, option_type='call'):
