@@ -516,6 +516,10 @@ class AdvancedOptionsSelector:
 def main():
     """Test advanced options selector"""
     import os
+    from dotenv import load_dotenv
+    
+    # Load environment variables from .env file
+    load_dotenv()
     
     selector = AdvancedOptionsSelector(
         polygon_api_key=os.getenv('POLYGON_API_KEY'),
