@@ -15,7 +15,7 @@ import os
 from typing import Dict, Optional, Any
 
 class SmartDataManager:
-    def __init__(self, tiingo_api_key='907ca772398b8f0249496b74ecea50e2e304ca00'):
+    def __init__(self, tiingo_api_key=None):
         """Initialize with Tiingo primary, Yahoo fallback, and smart caching"""
         self.tiingo_provider = TiingoDataProvider(tiingo_api_key)
         self.cache = {}  # In-memory cache for session

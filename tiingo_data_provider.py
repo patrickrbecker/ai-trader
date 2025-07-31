@@ -13,8 +13,14 @@ import json
 import os
 
 class TiingoDataProvider:
-    def __init__(self, api_key='907ca772398b8f0249496b74ecea50e2e304ca00'):
+    def __init__(self, api_key=None):
         """Initialize Tiingo client with session reuse for performance"""
+        # Get API key from environment variable or parameter
+        if not api_key:
+            api_key = os.getenv('TIINGO_API_KEY')
+            if not api_key:
+                raise ValueError("Tiingo API key required. Set TIINGO_API_KEY environment variable or pass api_key parameter.")
+        
         self.config = {
             'api_key': api_key,
             'session': True  # Reuse session for better performance
