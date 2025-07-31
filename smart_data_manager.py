@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Smart Data Manager - Efficient caching + Tiingo/Yahoo fallback
-Minimizes API calls while maintaining data quality
+Smart Data Manager - Triple-source hierarchy: Polygon → Tiingo → Yahoo
+Institutional-grade data with intelligent fallback system
 """
 
 import yfinance as yf
 from tiingo_data_provider import TiingoDataProvider
+from polygon_data_provider import PolygonDataProvider
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -15,23 +16,42 @@ import os
 from typing import Dict, Optional, Any
 
 class SmartDataManager:
-    def __init__(self, tiingo_api_key=None):
-        """Initialize with Tiingo primary, Yahoo fallback, and smart caching"""
-        self.tiingo_provider = TiingoDataProvider(tiingo_api_key)
+    def __init__(self, tiingo_api_key=None, polygon_api_key=None):
+        """Initialize with triple-source hierarchy: Polygon → Tiingo → Yahoo"""
+        
+        # Initialize all providers
+        try:
+            self.polygon_provider = PolygonDataProvider(polygon_api_key)
+            self.polygon_available = True
+        except Exception as e:
+            print(f"⚠️ Polygon initialization failed: {e}")
+            self.polygon_provider = None
+            self.polygon_available = False
+        
+        try:
+            self.tiingo_provider = TiingoDataProvider(tiingo_api_key)
+            self.tiingo_available = True
+        except Exception as e:
+            print(f"⚠️ Tiingo initialization failed: {e}")
+            self.tiingo_provider = None
+            self.tiingo_available = False
+        
         self.cache = {}  # In-memory cache for session
         self.cache_dir = "data/smart_cache"
         os.makedirs(self.cache_dir, exist_ok=True)
         
-        # API usage tracking - PREMIUM TIER
+        # API usage tracking
+        self.polygon_requests_used = 0
         self.tiingo_requests_used = 0
         self.tiingo_hourly_limit = 10000  # Premium: 10,000/hour
         self.tiingo_daily_limit = 100000  # Premium: 100,000/day
-        self.fallback_active = False
         
-        print("🧠 Smart Data Manager initialized")
-        print(f"   🥇 Primary: Tiingo (10,000/hour, 100,000/day) PREMIUM")
+        print("🧠 TRIPLE-SOURCE DATA MANAGER INITIALIZED")
+        print(f"   🏆 Primary: Polygon.io (Real-time, <20ms latency)")
+        print(f"   🥇 Secondary: Tiingo (10,000/hour, 100,000/day)")
         print(f"   🥈 Fallback: Yahoo Finance")
         print(f"   💾 Caching: Enabled")
+        print(f"   🔄 Status: Polygon={self.polygon_available}, Tiingo={self.tiingo_available}")
     
     def _check_tiingo_limits(self) -> bool:
         """Check if we can use Tiingo or should fallback to Yahoo"""
@@ -57,7 +77,7 @@ class SmartDataManager:
     
     def get_stock_data(self, symbol: str, start_date: str = None, end_date: str = None, 
                       force_yahoo: bool = False) -> Optional[Dict]:
-        """Get stock data with smart caching and fallback"""
+        """Get stock data with triple-source hierarchy and smart caching"""
         
         # Set default dates
         if not end_date:
@@ -71,30 +91,46 @@ class SmartDataManager:
             print(f"📦 Using cached data for {symbol}")
             return self.cache[cache_key]['data']
         
-        # Determine data source
-        use_tiingo = (not force_yahoo and 
-                     self._check_tiingo_limits() and 
-                     not self.fallback_active)
-        
-        if use_tiingo:
-            # Try Tiingo first
-            print(f"🥇 Fetching {symbol} from Tiingo...")
-            try:
-                data = self.tiingo_provider.get_stock_data(symbol, start_date, end_date)
-                if data:
-                    self.tiingo_requests_used += 1
-                    # Cache the result
-                    self.cache[cache_key] = {
-                        'data': data,
-                        'timestamp': time.time(),
-                        'source': 'tiingo'
-                    }
-                    print(f"   ✅ Tiingo success ({self.tiingo_requests_used}/{self.tiingo_hourly_limit} used)")
-                    return data
-                else:
-                    print(f"   ❌ Tiingo failed, falling back to Yahoo")
-            except Exception as e:
-                print(f"   ❌ Tiingo error: {e}, falling back to Yahoo")
+        if not force_yahoo:
+            # 1️⃣ Try Polygon.io first (highest quality, real-time)
+            if self.polygon_available:
+                print(f"🏆 Fetching {symbol} from Polygon.io...")
+                try:
+                    data = self.polygon_provider.get_stock_data(symbol, start_date, end_date)
+                    if data:
+                        self.polygon_requests_used += 1
+                        # Cache the result
+                        self.cache[cache_key] = {
+                            'data': data,
+                            'timestamp': time.time(),
+                            'source': 'polygon'
+                        }
+                        print(f"   ✅ Polygon success - institutional-grade data")
+                        return data
+                    else:
+                        print(f"   ❌ Polygon failed, trying Tiingo...")
+                except Exception as e:
+                    print(f"   ❌ Polygon error: {e}, trying Tiingo...")
+            
+            # 2️⃣ Try Tiingo second (premium tier, good quality)
+            if self.tiingo_available and self._check_tiingo_limits():
+                print(f"🥇 Fetching {symbol} from Tiingo...")
+                try:
+                    data = self.tiingo_provider.get_stock_data(symbol, start_date, end_date)
+                    if data:
+                        self.tiingo_requests_used += 1
+                        # Cache the result
+                        self.cache[cache_key] = {
+                            'data': data,
+                            'timestamp': time.time(),
+                            'source': 'tiingo'
+                        }
+                        print(f"   ✅ Tiingo success ({self.tiingo_requests_used}/{self.tiingo_hourly_limit} used)")
+                        return data
+                    else:
+                        print(f"   ❌ Tiingo failed, falling back to Yahoo")
+                except Exception as e:
+                    print(f"   ❌ Tiingo error: {e}, falling back to Yahoo")
         
         # Yahoo Finance fallback
         print(f"🥈 Fetching {symbol} from Yahoo...")
