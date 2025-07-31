@@ -22,14 +22,14 @@ class SmartDataManager:
         self.cache_dir = "data/smart_cache"
         os.makedirs(self.cache_dir, exist_ok=True)
         
-        # API usage tracking
+        # API usage tracking - PREMIUM TIER
         self.tiingo_requests_used = 0
-        self.tiingo_hourly_limit = 50
-        self.tiingo_daily_limit = 1000
+        self.tiingo_hourly_limit = 10000  # Premium: 10,000/hour
+        self.tiingo_daily_limit = 100000  # Premium: 100,000/day
         self.fallback_active = False
         
         print("🧠 Smart Data Manager initialized")
-        print(f"   🥇 Primary: Tiingo (50/hour, 1000/day)")
+        print(f"   🥇 Primary: Tiingo (10,000/hour, 100,000/day) PREMIUM")
         print(f"   🥈 Fallback: Yahoo Finance")
         print(f"   💾 Caching: Enabled")
     
